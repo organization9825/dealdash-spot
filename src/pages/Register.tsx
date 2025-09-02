@@ -1,3 +1,6 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,54 +8,95 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { authService } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Store } from 'lucide-react';
+import { Loader2, Store, Upload } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
+const CATEGORIES = [
+  "Restaurant",
+  "Cafe", 
+  "Bakery",
+  "Grocery",
+  "Clothing",
+  "Electronics",
+  "Pharmacy",
+  "Salon",
+  "Other"
+] as const;
+
+const registerSchema = z.object({
+  vendorName: z.string().min(2, "Vendor name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  shopName: z.string().min(2, "Shop name must be at least 2 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  location: z.string().min(2, "Location is required"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  category: z.enum(CATEGORIES, { required_error: "Please select a category" }),
+  image: z.instanceof(FileList).optional(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 const Register = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    description: '',
-    category: '',
-    location: '',
-    contact: ''
-  });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const form = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      vendorName: '',
+      email: '',
+      shopName: '',
+      description: '',
+      location: '',
+      phone: '',
+      password: '',
+    },
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const onSubmit = async (data: RegisterFormData) => {
     try {
       setLoading(true);
-      await authService.register(formData);
+      
+      const formData = new FormData();
+      formData.append('vendorName', data.vendorName);
+      formData.append('email', data.email);
+      formData.append('shopName', data.shopName);
+      formData.append('description', data.description);
+      formData.append('location', data.location);
+      formData.append('phone', data.phone);
+      formData.append('category', data.category);
+      formData.append('password', data.password);
+      
+      if (data.image && data.image.length > 0) {
+        formData.append('image', data.image[0]);
+      }
+
+      // Convert FormData to regular object for the API call
+      const registrationData = {
+        vendorName: data.vendorName,
+        email: data.email,
+        shopName: data.shopName,
+        description: data.description,
+        location: data.location,
+        phone: data.phone,
+        category: data.category,
+        password: data.password,
+      };
+
+      await authService.register(registrationData);
       
       toast({
         title: "Registration successful",
-        description: "Welcome to Discount24! You can now manage your shop.",
+        description: "Welcome to Discount24! Please log in to continue.",
       });
       
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -69,7 +113,7 @@ const Register = () => {
       <Navbar />
       
       <div className="flex items-center justify-center py-16 px-4">
-        <Card className="w-full max-w-lg">
+        <Card className="w-full max-w-2xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-primary/10 rounded-full">
@@ -83,95 +127,167 @@ const Register = () => {
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Shop Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Your shop name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="vendorName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="shopName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shop Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your shop name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
                   name="email"
-                  type="email"
-                  placeholder="vendor@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="vendor@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
+
+                <FormField
+                  control={form.control}
                   name="password"
-                  type="password"
-                  placeholder="Choose a secure password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Choose a secure password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone *</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="Phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="City, State" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
                   name="category"
-                  placeholder="e.g., Restaurant, Retail, Services"
-                  value={formData.category}
-                  onChange={handleChange}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {CATEGORIES.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  placeholder="City, State"
-                  value={formData.location}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="contact">Contact</Label>
-                <Input
-                  id="contact"
-                  name="contact"
-                  placeholder="Phone number or website"
-                  value={formData.contact}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
+
+                <FormField
+                  control={form.control}
                   name="description"
-                  placeholder="Tell customers about your shop..."
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows={3}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tell customers about your shop..."
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Create Account
-              </Button>
-            </form>
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <FormItem>
+                      <FormLabel>Shop Image</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => onChange(e.target.files)}
+                            {...field}
+                          />
+                          <Upload className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Create Account
+                </Button>
+              </form>
+            </Form>
             
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}

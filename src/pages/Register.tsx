@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { authService } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Store, Upload } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -77,19 +77,13 @@ const Register = () => {
         formData.append('image', data.image[0]);
       }
 
-      // Convert FormData to regular object for the API call
-      const registrationData = {
-        vendorName: data.vendorName,
-        email: data.email,
-        shopName: data.shopName,
-        description: data.description,
-        location: data.location,
-        phone: data.phone,
-        category: data.category,
-        password: data.password,
-      };
+      const response = await api.post('/api/vendors/register', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-      await authService.register(registrationData);
+      if (response.data.token) {
+        localStorage.setItem('vendorToken', response.data.token);
+      }
       
       toast({
         title: "Registration successful",

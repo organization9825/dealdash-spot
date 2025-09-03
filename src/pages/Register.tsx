@@ -181,7 +181,22 @@ const Register = () => {
                     <FormItem>
                       <FormLabel>OTP *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter OTP code" {...field} />
+                        <div className="flex gap-2">
+                          <Input placeholder="Enter OTP code" {...field} />
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="whitespace-nowrap"
+                            onClick={() => {
+                              toast({
+                                title: "OTP Sent",
+                                description: "Check your email for the OTP code",
+                              });
+                            }}
+                          >
+                            Generate OTP
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

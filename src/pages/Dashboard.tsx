@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { authService, menuService } from '@/lib/api';
+import { authService, menuService, vendorService } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit2, Trash2, Store, Menu as MenuIcon, Percent } from 'lucide-react';
+import { Plus, Edit2, Trash2, Store, Menu as MenuIcon, Percent, Save, Loader2 } from 'lucide-react';
 
 interface MenuItem {
   id: string;
@@ -34,6 +34,19 @@ const Dashboard = () => {
     discount: '',
     category: ''
   });
+  
+  // Vendor profile state
+  const [vendorProfile, setVendorProfile] = useState({
+    name: '',
+    description: '',
+    category: '',
+    location: '',
+    phone: '',
+    email: '',
+    website: ''
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const { toast } = useToast();
 
   // Check if user is authenticated
@@ -43,6 +56,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchMenuItems();
+    fetchVendorProfile();
   }, []);
 
   const fetchMenuItems = async () => {
@@ -75,6 +89,29 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVendorProfile = async () => {
+    try {
+      // Mock data for now - replace with actual API call when backend is ready
+      const mockProfile = {
+        name: 'Mario\'s Italian Restaurant',
+        description: 'Authentic Italian cuisine with fresh ingredients and traditional recipes passed down through generations.',
+        category: 'Restaurant',
+        location: '123 Main Street, Downtown',
+        phone: '+1 (555) 123-4567',
+        email: 'info@mariositalian.com',
+        website: 'www.mariositalian.com'
+      };
+      
+      setVendorProfile(mockProfile);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch vendor profile",
+        variant: "destructive",
+      });
     }
   };
 
@@ -177,6 +214,38 @@ const Dashboard = () => {
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setVendorProfile(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileLoading(true);
+    try {
+      // Replace with actual API call using vendorService.update
+      // const vendorId = 'current-vendor-id'; // Get from auth context or API
+      // await vendorService.update(vendorId, vendorProfile);
+      
+      // Mock success for now
+      toast({
+        title: "Profile Updated",
+        description: "Your vendor profile has been updated successfully.",
+      });
+      setIsEditingProfile(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   return (
@@ -381,19 +450,138 @@ const Dashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="profile">
+          <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Shop Profile</CardTitle>
+                <CardTitle className="flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <Store className="h-5 w-5" />
+                    Shop Profile
+                  </div>
+                  <Button
+                    variant={isEditingProfile ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => {
+                      if (isEditingProfile) {
+                        setIsEditingProfile(false);
+                        fetchVendorProfile(); // Reset to original data
+                      } else {
+                        setIsEditingProfile(true);
+                      }
+                    }}
+                  >
+                    {isEditingProfile ? "Cancel" : "Edit Profile"}
+                  </Button>
+                </CardTitle>
                 <CardDescription>
-                  Update your shop information and settings
+                  Manage your shop information and contact details
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Shop profile management coming soon...</p>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-name">Shop Name</Label>
+                    <Input
+                      id="vendor-name"
+                      name="name"
+                      value={vendorProfile.name}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-category">Category</Label>
+                    <Input
+                      id="vendor-category"
+                      name="category"
+                      value={vendorProfile.category}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-phone">Phone</Label>
+                    <Input
+                      id="vendor-phone"
+                      name="phone"
+                      value={vendorProfile.phone}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-email">Email</Label>
+                    <Input
+                      id="vendor-email"
+                      name="email"
+                      type="email"
+                      value={vendorProfile.email}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-website">Website</Label>
+                    <Input
+                      id="vendor-website"
+                      name="website"
+                      value={vendorProfile.website}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="vendor-location">Location</Label>
+                    <Input
+                      id="vendor-location"
+                      name="location"
+                      value={vendorProfile.location}
+                      onChange={handleProfileChange}
+                      disabled={!isEditingProfile}
+                      className={!isEditingProfile ? "bg-muted" : ""}
+                    />
+                  </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="vendor-description">Description</Label>
+                  <Textarea
+                    id="vendor-description"
+                    name="description"
+                    value={vendorProfile.description}
+                    onChange={handleProfileChange}
+                    disabled={!isEditingProfile}
+                    className={!isEditingProfile ? "bg-muted" : ""}
+                    rows={4}
+                  />
+                </div>
+                
+                {isEditingProfile && (
+                  <div className="flex gap-2 pt-4">
+                    <Button 
+                      onClick={handleSaveProfile} 
+                      disabled={profileLoading}
+                      className="flex items-center gap-2"
+                    >
+                      {profileLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -30,6 +30,7 @@ const CATEGORIES = [
 const registerSchema = z.object({
   vendorName: z.string().min(2, "Vendor name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
+  otp: z.string().min(4, "OTP must be at least 4 characters"),
   shopName: z.string().min(2, "Shop name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   location: z.string().min(2, "Location is required"),
@@ -37,6 +38,10 @@ const registerSchema = z.object({
   category: z.enum(CATEGORIES, { required_error: "Please select a category" }),
   image: z.instanceof(FileList).optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  retypePassword: z.string().min(6, "Please retype your password"),
+}).refine((data) => data.password === data.retypePassword, {
+  message: "Passwords don't match",
+  path: ["retypePassword"],
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -51,11 +56,13 @@ const Register = () => {
     defaultValues: {
       vendorName: '',
       email: '',
+      otp: '',
       shopName: '',
       description: '',
       location: '',
       phone: '',
       password: '',
+      retypePassword: '',
     },
   });
 
@@ -169,12 +176,40 @@ const Register = () => {
 
                 <FormField
                   control={form.control}
+                  name="otp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OTP *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter OTP code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Password *</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="Choose a secure password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="retypePassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Retype Password *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Retype your password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

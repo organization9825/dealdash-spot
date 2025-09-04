@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [vendorId, setVendorId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -55,33 +56,32 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    fetchMenuItems();
-    fetchVendorProfile();
+    initializeDashboard();
   }, []);
 
-  const fetchMenuItems = async () => {
+  const initializeDashboard = async () => {
     try {
-      // For demo purposes, using mock data
-      // In real app: const data = await menuService.getVendorMenu();
-      setMenuItems([
-        {
-          id: '1',
-          name: 'Special Burger',
-          description: 'Delicious burger with special sauce',
-          price: 12.99,
-          discount: 20,
-          category: 'Main Course'
-        },
-        {
-          id: '2',
-          name: 'Pizza Margherita',
-          description: 'Classic pizza with tomato sauce and mozzarella',
-          price: 15.99,
-          discount: 15,
-          category: 'Pizza'
-        }
+      const vendor = await authService.getCurrentVendor();
+      setVendorId(vendor.id);
+      await Promise.all([
+        fetchMenuItems(vendor.id),
+        fetchVendorProfile(vendor.id)
       ]);
     } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchMenuItems = async (id: string) => {
+    try {
+      const data = await menuService.getVendorMenu(id);
+      setMenuItems(data);
+    } catch (error) {
+      console.error('Failed to fetch menu items:', error);
       toast({
         title: "Error",
         description: "Failed to load menu items",
@@ -92,21 +92,20 @@ const Dashboard = () => {
     }
   };
 
-  const fetchVendorProfile = async () => {
+  const fetchVendorProfile = async (id: string) => {
     try {
-      // Mock data for now - replace with actual API call when backend is ready
-      const mockProfile = {
-        name: 'Mario\'s Italian Restaurant',
-        description: 'Authentic Italian cuisine with fresh ingredients and traditional recipes passed down through generations.',
-        category: 'Restaurant',
-        location: '123 Main Street, Downtown',
-        phone: '+1 (555) 123-4567',
-        email: 'info@mariositalian.com',
-        website: 'www.mariositalian.com'
-      };
-      
-      setVendorProfile(mockProfile);
+      const data = await vendorService.getById(id);
+      setVendorProfile({
+        name: data.name || '',
+        description: data.description || '',
+        category: data.category || '',
+        location: data.location || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        website: data.website || ''
+      });
     } catch (error) {
+      console.error('Failed to fetch vendor profile:', error);
       toast({
         title: "Error",
         description: "Failed to fetch vendor profile",
@@ -227,17 +226,14 @@ const Dashboard = () => {
   const handleSaveProfile = async () => {
     setProfileLoading(true);
     try {
-      // Replace with actual API call using vendorService.update
-      // const vendorId = 'current-vendor-id'; // Get from auth context or API
-      // await vendorService.update(vendorId, vendorProfile);
-      
-      // Mock success for now
+      await vendorService.update(vendorId, vendorProfile);
       toast({
         title: "Profile Updated",
         description: "Your vendor profile has been updated successfully.",
       });
       setIsEditingProfile(false);
     } catch (error) {
+      console.error('Failed to update profile:', error);
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -462,10 +458,10 @@ const Dashboard = () => {
                     variant={isEditingProfile ? "outline" : "default"}
                     size="sm"
                     onClick={() => {
-                      if (isEditingProfile) {
-                        setIsEditingProfile(false);
-                        fetchVendorProfile(); // Reset to original data
-                      } else {
+                       if (isEditingProfile) {
+                         setIsEditingProfile(false);
+                         fetchVendorProfile(vendorId); // Reset to original data
+                       } else {
                         setIsEditingProfile(true);
                       }
                     }}

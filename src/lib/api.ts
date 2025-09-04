@@ -59,6 +59,11 @@ export const authService = {
 
   isAuthenticated: () => {
     return !!localStorage.getItem('vendorToken');
+  },
+
+  getCurrentVendor: async () => {
+    const response = await api.get('/api/vendors/current');
+    return response.data;
   }
 };
 
@@ -66,6 +71,11 @@ export const authService = {
 export const vendorService = {
   getAll: async () => {
     const response = await api.get('/api/vendors/');
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get(`/api/vendors/${id}`);
     return response.data;
   },
 
@@ -77,8 +87,8 @@ export const vendorService = {
 
 // Menu service
 export const menuService = {
-  getVendorMenu: async () => {
-    const response = await api.get('/api/vendors/menu/');
+  getVendorMenu: async (vendorId: string) => {
+    const response = await api.get(`/api/vendors/menu/${vendorId}`);
     return response.data;
   },
 
